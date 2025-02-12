@@ -49,9 +49,12 @@ struct command_line *parse_input()
 			if (strcmp(token, "exit")==0){
 			//printf("exit indicator: %d",(strcmp(token, "exit")==0));
 			running = 1;
-			break;
-		}
-
+			break;}
+		} else if (strcmp(token, "cd")) {
+			// getenv('HOME')			
+			// open that directory 
+			// handle one more token after cd?  
+			// maybe make this a separate function?????
 		}
 		else if(!strcmp(token,"<")){
 			curr_command->input_file = strdup(strtok(NULL," \n"));
