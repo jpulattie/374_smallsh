@@ -39,15 +39,15 @@ struct command_line *parse_input()
 	while(token){
 		//printf("token top of while loop: %s", token);
 		if (token[0] == '#' && command_count == 0) {
-			printf("found comment: %s\n", token);
+			//printf("found comment: %s\n", token);
 			while (token != NULL && (strcmp(token, "\n") != 0)) {
 				token = strtok(NULL, "\n");
 			}
 		} else if (token[0] != '#' || command_count != 0) {
-			printf("token: %s\n", token);
+			//printf("token: %s\n", token);
 			command_count++;
 			if (strcmp(token, "exit")==0){
-			printf("exit indicator: %d",(strcmp(token, "exit")==0));
+			//printf("exit indicator: %d",(strcmp(token, "exit")==0));
 			running = 1;
 			break;
 		}
@@ -70,8 +70,8 @@ struct command_line *parse_input()
 			command_count++;
 		}
 		token=strtok(NULL," \n");
-		printf("running number: %d\n", running);
-		printf("Command Count: %d\n", command_count);
+		//printf("running number: %d\n", running);
+		//printf("Command Count: %d\n", command_count);
 	}
 	return curr_command;
 }
@@ -82,7 +82,7 @@ int main()
 
 	while(running != 1)
 	{
-		printf("running # in main: %d\n", running );
+		//printf("running # in main: %d\n", running );
 		curr_command = parse_input();
 
 	}
