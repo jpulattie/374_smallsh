@@ -8,6 +8,8 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+
 
 #define INPUT_LENGTH 2048
 #define MAX_ARGS		 512
@@ -22,13 +24,45 @@ struct command_line
 	bool is_bg;
 };
 
+int cd (char *directory){
+	char current_dir[256];
+	int size = 256;
+	getcwd(current_dir, sizeof(current_dir));
+	//printf("current directory after check: %s\n", current_dir);
+	if (directory == NULL) {
+		directory = getenv("HOME");
+	}
+	if (directory[0] == '.'){
+		//printf("Local directory: %s\n", directory);
+		// if its local, append it to the current working directory
+	}
+	if (strcmp(directory, current_dir) !=0) {
+		//printf("DIFFERENT DIRECTORY INDICATED\n");
+		//printf("directory: %s\n", directory);
+		//printf("current home: %s\n", current_dir);
+		if (chdir(directory) == 0) {
+			//printf("Changed directory to: %s\n", directory);
+    		} else {
+        		perror("chdir failed");
+    		};
+		//printf("checking...\n");
+		getcwd(current_dir, sizeof(current_dir));
+		//printf("current directory after check: %s\n", current_dir);
+	}
+	//printf("Directory: %s\n", directory);
+	// do the change directory stuffs up here
+	return 0;
+}
 
 struct command_line *parse_input()
 {
 	char input[INPUT_LENGTH];
 	struct command_line *curr_command = (struct command_line *) calloc(1, sizeof(struct command_line));
 	int command_count = 0;
+	char get_direc[256];
 	int hashtags = 0;
+	char *cd_home;
+	int loop = 1;
 	// Get input
 	printf(": ");
 	fflush(stdout);
@@ -36,21 +70,38 @@ struct command_line *parse_input()
 
 	// Tokenize the input
 	char *token = strtok(input, " \n");
+	char *directory = NULL;
 	while(token){
-		//printf("token top of while loop: %s", token);
+		//printf("token top of while loop: %s\n", token);
 		if (token[0] == '#' && command_count == 0) {
 			//printf("found comment: %s\n", token);
 			while (token != NULL && (strcmp(token, "\n") != 0)) {
 				token = strtok(NULL, "\n");
 			}
-		} else if (token[0] != '#' || command_count != 0) {
+		} else if ((token[0] != '#' || command_count != 0) && (strcmp(token, "exit")==0)) {
 			//printf("token: %s\n", token);
 			command_count++;
-			if (strcmp(token, "exit")==0){
-			//printf("exit indicator: %d",(strcmp(token, "exit")==0));
+			//printf("exit indicator: %d\n",(strcmp(token, "exit")==0));
 			running = 1;
-			break;}
-		} else if (strcmp(token, "cd")) {
+			break;
+		} else if (strcmp(token, "cd") == 0) {
+			//printf("CATCH HERE\n");
+			//cd_home = getenv("HOME");
+			//getcwd(get_direc, sizeof(get_direc));
+			//printf("Before cd runs, current working directory is: %s\n", get_direc);
+			//printf("cd is: %s\n", cd_home);
+			token = strtok(NULL, " \n");
+
+			while (token != NULL && (strcmp(token, "\n") != 0)) {
+				//printf("Loop %d start\n", loop);
+				//printf("token after CD: %s\n", token);
+				directory = (char *)malloc(strlen(token) + 1);
+				directory = token;
+				//printf("directory string: %s\n", directory);
+				token = strtok(NULL, " \n");
+				//printf("loop %d end\n", loop);
+			}
+			cd(directory);
 			// getenv('HOME')			
 			// open that directory 
 			// handle one more token after cd?  
