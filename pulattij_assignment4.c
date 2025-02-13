@@ -14,6 +14,7 @@
 #define INPUT_LENGTH 2048
 #define MAX_ARGS		 512
 
+char executable[INPUT_LENGTH + 1];
 int running = 0;
 struct command_line
 {
@@ -28,29 +29,30 @@ int cd (char *directory){
 	char current_dir[256];
 	int size = 256;
 	getcwd(current_dir, sizeof(current_dir));
-	//printf("current directory after check: %s\n", current_dir);
+	printf("current directory after check: %s\n", current_dir);
 	if (directory == NULL) {
 		directory = getenv("HOME");
 	}
-	if (directory[0] == '.'){
-		//printf("Local directory: %s\n", directory);
-		// if its local, append it to the current working directory
-	}
 	if (strcmp(directory, current_dir) !=0) {
-		//printf("DIFFERENT DIRECTORY INDICATED\n");
-		//printf("directory: %s\n", directory);
-		//printf("current home: %s\n", current_dir);
+		printf("DIFFERENT DIRECTORY INDICATED\n");
+		printf("directory: %s\n", directory);
+		printf("current home: %s\n", current_dir);
 		if (chdir(directory) == 0) {
-			//printf("Changed directory to: %s\n", directory);
+			printf("Changed directory to: %s\n", directory);
     		} else {
         		perror("chdir failed");
     		};
-		//printf("checking...\n");
+		printf("checking...\n");
 		getcwd(current_dir, sizeof(current_dir));
-		//printf("current directory after check: %s\n", current_dir);
+		printf("current directory after check: %s\n", current_dir);
 	}
-	//printf("Directory: %s\n", directory);
+	printf("Directory: %s\n", directory);
 	// do the change directory stuffs up here
+	return 0;
+}
+
+int execute(char *ex){
+	printf("executable command: %s", ex);
 	return 0;
 }
 
@@ -63,6 +65,7 @@ struct command_line *parse_input()
 	int hashtags = 0;
 	char *cd_home;
 	int loop = 1;
+	int breaker = 0;
 	// Get input
 	printf(": ");
 	fflush(stdout);
@@ -71,8 +74,8 @@ struct command_line *parse_input()
 	// Tokenize the input
 	char *token = strtok(input, " \n");
 	char *directory = NULL;
-	while(token){
-		//printf("token top of while loop: %s\n", token);
+	while(token && breaker ==0){
+		printf("token top of while loop: %s\n", token);
 		if (token[0] == '#' && command_count == 0) {
 			//printf("found comment: %s\n", token);
 			while (token != NULL && (strcmp(token, "\n") != 0)) {
@@ -83,6 +86,8 @@ struct command_line *parse_input()
 			command_count++;
 			//printf("exit indicator: %d\n",(strcmp(token, "exit")==0));
 			running = 1;
+			printf("EXITING\n");
+			breaker =1;
 			break;
 		} else if (strcmp(token, "cd") == 0) {
 			//printf("CATCH HERE\n");
@@ -102,6 +107,8 @@ struct command_line *parse_input()
 				//printf("loop %d end\n", loop);
 			}
 			cd(directory);
+			breaker = 1;
+			break;
 			// getenv('HOME')			
 			// open that directory 
 			// handle one more token after cd?  
@@ -121,12 +128,21 @@ struct command_line *parse_input()
 			
 		} else {
 			curr_command->argv[curr_command->argc++] = strdup(token);
+			if (strlen(executable) == 0){
+				printf("blank executable\n");
+				strcat(executable, strdup(token)); 
+			} else if (strlen(executable) !=0 ) {
+				strcat(executable, " "); 
+				strcat(executable, strdup(token)); 
+			}
 			command_count++;
 		}
 		token=strtok(NULL," \n");
 		//printf("running number: %d\n", running);
 		//printf("Command Count: %d\n", command_count);
 	}
+	printf("ready to execute -%s-", executable);
+
 	return curr_command;
 }
 
