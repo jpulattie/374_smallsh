@@ -87,6 +87,7 @@ struct command_line *parse_input()
 			//printf("exit indicator: %d\n",(strcmp(token, "exit")==0));
 			running = 1;
 			printf("EXITING\n");
+			executable[0] = '\0';
 			breaker =1;
 			break;
 		} else if (strcmp(token, "cd") == 0) {
@@ -108,6 +109,7 @@ struct command_line *parse_input()
 			}
 			cd(directory);
 			breaker = 1;
+			executable[0] = '\0';
 			break;
 			// getenv('HOME')			
 			// open that directory 
@@ -141,8 +143,10 @@ struct command_line *parse_input()
 		//printf("running number: %d\n", running);
 		//printf("Command Count: %d\n", command_count);
 	}
-	printf("ready to execute -%s-", executable);
-
+	printf("ready to execute -%s-\n", executable);
+	printf("resetting executable\n");
+	executable[0] = '\0';
+	printf("executable is now -%s-\n", executable);
 	return curr_command;
 }
 
