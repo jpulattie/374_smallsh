@@ -9,11 +9,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 
 #define INPUT_LENGTH 2048
 #define MAX_ARGS		 512
 
+int exit_status = 0;
 char executable[INPUT_LENGTH + 1];
 int running = 0;
 struct command_line
@@ -51,8 +54,36 @@ int cd (char *directory){
 	return 0;
 }
 
+int status() {
+	printf("Exit Status %d\n", exit_status);
+}
+
 int execute(char *ex){
-	printf("executable command: %s", ex);
+	pid_t spawnpid = -5; 
+	int childStatus; 
+	int childPid; 
+
+	printf("executable command function: %s\n", ex);
+	spawnpid = fork();
+	
+	switch (spawnpid) {
+		case -1:
+			perror("fork() failed!"); 
+			exit_status++;
+			//exit(EXIT_FAILURE); 
+			break; 
+		case 0:
+			printf("I am the child. My pid = %d\n", getpid()); 
+			sleep(3);
+			break;
+		default:
+			printf("I am the parent. My pid = %d\n", getpid()); 
+			childPid = waitpid(-1, &childStatus, WNOHANG); 
+			printf("Parent's waiting is done as the child with pid %d exited\n", childPid); 
+			break;
+
+	}
+		printf("here\n");
 	return 0;
 }
 
@@ -144,6 +175,10 @@ struct command_line *parse_input()
 		//printf("Command Count: %d\n", command_count);
 	}
 	printf("ready to execute -%s-\n", executable);
+	if (strcmp(executable, "status") == 0) {
+		status();
+	} else {
+	execute(executable);}
 	printf("resetting executable\n");
 	executable[0] = '\0';
 	printf("executable is now -%s-\n", executable);
