@@ -90,7 +90,7 @@ int execute(struct command_line *ex){
 			}
 			//printf("Exit status is now: %d\n", exit_status);
 			//printf("Parent's waiting is done as the child with pid %d exited\n", childPid); 
-			break;
+			break;  //
 
 	}
 		//printf("here\n");
