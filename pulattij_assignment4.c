@@ -16,7 +16,7 @@
 #define INPUT_LENGTH 2048
 #define MAX_ARGS		 512
 
-int exit_status = 0;
+int exit_status;
 char executable[INPUT_LENGTH + 1];
 int running = 0;
 struct command_line
@@ -55,30 +55,40 @@ int cd (char *directory){
 }
 
 int status() {
+	
 	printf("Exit Status %d\n", exit_status);
 }
 
-int execute(char *ex){
+int execute(struct command_line *ex){
 	pid_t spawnpid = -5; 
 	int childStatus; 
 	int childPid; 
 
-	printf("executable command function: %s\n", ex);
+	
+	//printf("executable command function: %s\n", ex);
 	spawnpid = fork();
 	
 	switch (spawnpid) {
 		case -1:
 			perror("fork() failed!"); 
-			exit_status++;
-			//exit(EXIT_FAILURE); 
+			exit_status = 1;
+			exit(1); 
 			break; 
 		case 0:
-			printf("I am the child. My pid = %d\n", getpid()); 
-			sleep(3);
+			printf("I am the child. My pid = %d Going to sleep now!\n", getpid()); 
+			execvp(ex->argv[0], ex->argv);
+			perror("process failed");
+			exit_status =1;
+			printf("exit status: %d\n", exit_status);
+			exit(1);
 			break;
 		default:
 			printf("I am the parent. My pid = %d\n", getpid()); 
-			childPid = waitpid(-1, &childStatus, WNOHANG); 
+			childPid = waitpid(spawnpid,&childStatus, 0); 
+			if(WIFEXITED(childStatus)) {
+				exit_status = WEXITSTATUS(childStatus);
+			}
+			printf("Exit status is now: %d\n", exit_status);
 			printf("Parent's waiting is done as the child with pid %d exited\n", childPid); 
 			break;
 
@@ -177,8 +187,8 @@ struct command_line *parse_input()
 	printf("ready to execute -%s-\n", executable);
 	if (strcmp(executable, "status") == 0) {
 		status();
-	} else {
-	execute(executable);}
+	} else if (strlen(executable) > 0){
+	execute(curr_command);}
 	printf("resetting executable\n");
 	executable[0] = '\0';
 	printf("executable is now -%s-\n", executable);
