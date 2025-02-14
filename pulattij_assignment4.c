@@ -17,6 +17,8 @@
 #define INPUT_LENGTH 2048
 #define MAX_ARGS		 512
 
+int new_out;
+int new_in;
 int exit_status;
 char executable[INPUT_LENGTH + 1];
 int running = 0;
@@ -78,6 +80,8 @@ int execute(struct command_line *ex){
 		case 0:
 			//printf("I am the child. My pid = %d Going to sleep now!\n", getpid()); 
 			execvp(ex->argv[0], ex->argv);
+			close(new_out);
+			close(new_in);
 			perror("process failed");
 			exit_status =1;
 			//printf("exit status: %d\n", exit_status);
@@ -89,6 +93,8 @@ int execute(struct command_line *ex){
 			if(WIFEXITED(childStatus)) {
 				exit_status = WEXITSTATUS(childStatus);
 			}
+			close(new_out);
+			close(new_in);
 			//printf("Exit status is now: %d\n", exit_status);
 			//printf("Parent's waiting is done as the child with pid %d exited\n", childPid); 
 			break;  //
@@ -118,8 +124,7 @@ struct command_line *parse_input()
 	char *directory = NULL;
 	char *input_file_name = NULL;
 	char *output_file_name = NULL;
-	int new_out;
-	int new_in;
+
 
 	while(token && breaker ==0){
 		//printf("token top of while loop: %s\n", token);
@@ -230,8 +235,6 @@ struct command_line *parse_input()
 	//printf("resetting executable\n");
 	executable[0] = '\0';
 	//printf("executable is now -%s-\n", executable);
-	close(new_out);
-	close(new_in);
 	return curr_command;
 }
 
