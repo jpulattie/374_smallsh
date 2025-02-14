@@ -32,31 +32,31 @@ int cd (char *directory){
 	char current_dir[256];
 	int size = 256;
 	getcwd(current_dir, sizeof(current_dir));
-	printf("current directory after check: %s\n", current_dir);
+	//printf("current directory after check: %s\n", current_dir);
 	if (directory == NULL) {
 		directory = getenv("HOME");
 	}
 	if (strcmp(directory, current_dir) !=0) {
-		printf("DIFFERENT DIRECTORY INDICATED\n");
-		printf("directory: %s\n", directory);
-		printf("current home: %s\n", current_dir);
+		//printf("DIFFERENT DIRECTORY INDICATED\n");
+		//printf("directory: %s\n", directory);
+		//printf("current home: %s\n", current_dir);
 		if (chdir(directory) == 0) {
-			printf("Changed directory to: %s\n", directory);
+			//printf("Changed directory to: %s\n", directory);
     		} else {
         		perror("chdir failed");
     		};
-		printf("checking...\n");
+		//printf("checking...\n");
 		getcwd(current_dir, sizeof(current_dir));
-		printf("current directory after check: %s\n", current_dir);
+		//printf("current directory after check: %s\n", current_dir);
 	}
-	printf("Directory: %s\n", directory);
+	//printf("Directory: %s\n", directory);
 	// do the change directory stuffs up here
 	return 0;
 }
 
 int status() {
 	
-	printf("Exit Status %d\n", exit_status);
+	printf("exit value %d\n", exit_status);
 }
 
 int execute(struct command_line *ex){
@@ -75,25 +75,25 @@ int execute(struct command_line *ex){
 			exit(1); 
 			break; 
 		case 0:
-			printf("I am the child. My pid = %d Going to sleep now!\n", getpid()); 
+			//printf("I am the child. My pid = %d Going to sleep now!\n", getpid()); 
 			execvp(ex->argv[0], ex->argv);
 			perror("process failed");
 			exit_status =1;
-			printf("exit status: %d\n", exit_status);
+			//printf("exit status: %d\n", exit_status);
 			exit(1);
 			break;
 		default:
-			printf("I am the parent. My pid = %d\n", getpid()); 
+			//printf("I am the parent. My pid = %d\n", getpid()); 
 			childPid = waitpid(spawnpid,&childStatus, 0); 
 			if(WIFEXITED(childStatus)) {
 				exit_status = WEXITSTATUS(childStatus);
 			}
-			printf("Exit status is now: %d\n", exit_status);
-			printf("Parent's waiting is done as the child with pid %d exited\n", childPid); 
+			//printf("Exit status is now: %d\n", exit_status);
+			//printf("Parent's waiting is done as the child with pid %d exited\n", childPid); 
 			break;
 
 	}
-		printf("here\n");
+		//printf("here\n");
 	return 0;
 }
 
@@ -116,7 +116,7 @@ struct command_line *parse_input()
 	char *token = strtok(input, " \n");
 	char *directory = NULL;
 	while(token && breaker ==0){
-		printf("token top of while loop: %s\n", token);
+		//printf("token top of while loop: %s\n", token);
 		if (token[0] == '#' && command_count == 0) {
 			//printf("found comment: %s\n", token);
 			while (token != NULL && (strcmp(token, "\n") != 0)) {
@@ -127,7 +127,7 @@ struct command_line *parse_input()
 			command_count++;
 			//printf("exit indicator: %d\n",(strcmp(token, "exit")==0));
 			running = 1;
-			printf("EXITING\n");
+			//printf("EXITING\n");
 			executable[0] = '\0';
 			breaker =1;
 			break;
@@ -172,7 +172,7 @@ struct command_line *parse_input()
 		} else {
 			curr_command->argv[curr_command->argc++] = strdup(token);
 			if (strlen(executable) == 0){
-				printf("blank executable\n");
+				//printf("blank executable\n");
 				strcat(executable, strdup(token)); 
 			} else if (strlen(executable) !=0 ) {
 				strcat(executable, " "); 
@@ -184,14 +184,14 @@ struct command_line *parse_input()
 		//printf("running number: %d\n", running);
 		//printf("Command Count: %d\n", command_count);
 	}
-	printf("ready to execute -%s-\n", executable);
+	//printf("ready to execute -%s-\n", executable);
 	if (strcmp(executable, "status") == 0) {
 		status();
 	} else if (strlen(executable) > 0){
 	execute(curr_command);}
-	printf("resetting executable\n");
+	//printf("resetting executable\n");
 	executable[0] = '\0';
-	printf("executable is now -%s-\n", executable);
+	//printf("executable is now -%s-\n", executable);
 	return curr_command;
 }
 
