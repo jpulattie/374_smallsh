@@ -163,32 +163,42 @@ struct command_line *parse_input()
 		}
 		else if(!strcmp(token,"<")){
 			curr_command->input_file = strdup(strtok(NULL," \n"));
-			printf("command input catch: %s\n", curr_command->input_file);
+			//printf("command input catch: %s\n", curr_command->input_file);
 			input_file_name = (char *)malloc(strlen(curr_command->input_file) + 2);
-			strcat(input_file_name, "\""); 
+			//strcat(input_file_name, "\""); 
 			strcat(input_file_name, strdup(curr_command->input_file)); 
-			strcat(input_file_name, "\""); 
-			printf("input file name: %s\n", input_file_name);
-
+			//strcat(input_file_name, "\""); 
+			//printf("input file name: %s\n", input_file_name);
+			int open_new_input = open(input_file_name, O_RDONLY);
+			if (open_new_input == -1 ) {
+				perror("error opening file:");
+				exit_status = 1;
+				//exit(1);
+			} 
+			//else {
+			//	int new_in = dup2(open_new_input, 0);
+			//  }
 			command_count++;
 			
 		} else if(!strcmp(token,">")){
 			curr_command->output_file = strdup(strtok(NULL," \n"));
-			printf("command output catch: %s\n", curr_command->output_file);
+			//printf("command output catch: %s\n", curr_command->output_file);
 			output_file_name = (char *)malloc(strlen(curr_command->output_file) + 2);
-			strcat(output_file_name, "\""); 
+			//strcat(output_file_name, "\""); 
 			strcat(output_file_name, strdup(curr_command->output_file));
-			strcat(output_file_name, "\""); 
-			printf("output file name: %s\n", output_file_name);
-			int open_new = open(output_file_name, O_RDONLY);
-			if (open_new == -1 ) {
+			//strcat(output_file_name, "\""); 
+			//printf("output file name: %s\n", output_file_name);
+			int open_new_output = open(output_file_name, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+			if (open_new_output == -1 ) {
 				perror("error opening file:");
 				exit_status = 1;
 				//exit(1);
-			} else {
-				int new_out = dup2(open_new, 1);
-				printf("should be printing to new file?");
-			  }
+			} 
+			//else {
+			//	int new_out = dup2(open_new_output, 1);
+			//	printf("should be printing to new file?\n");
+			//	close(new_out);
+			//  }
 			command_count++;
 			
 		} else if(!strcmp(token,"&")){
@@ -209,6 +219,17 @@ struct command_line *parse_input()
 		token=strtok(NULL," \n");
 		//printf("running number: %d\n", running);
 		//printf("Command Count: %d\n", command_count);
+	}
+	//printf("output file name: %s\n", output_file_name);
+	//printf("input file name:  %s\n", input_file_name);
+	if (output_file_name && input_file_name) {
+		printf("both check\n");
+		printf("output: %s\n", output_file_name);
+		printf("input:  %s\n", input_file_name);
+	} else if (output_file_name) {
+		printf("output only: %s\n", output_file_name);
+	} else if (input_file_name) {
+		printf("input only:  %s\n", input_file_name);
 	}
 	printf("ready to execute -%s-\n", executable);
 	if (strcmp(executable, "status") == 0) {
