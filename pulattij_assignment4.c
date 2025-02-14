@@ -165,12 +165,12 @@ struct command_line *parse_input()
 		}
 		else if(!strcmp(token,"<")){
 			curr_command->input_file = strdup(strtok(NULL," \n"));
-			printf("command input catch: %s\n", curr_command->input_file);
+			//printf("command input catch: %s\n", curr_command->input_file);
 			input_file_name = (char *)malloc(strlen(curr_command->input_file) + 2);
 			strcat(input_file_name, "\""); 
 			strcat(input_file_name, strdup(curr_command->input_file)); 
 			strcat(input_file_name, "\""); 
-			printf("input file name: %s\n", input_file_name);
+			//printf("input file name: %s\n", input_file_name);
 			int open_new_input = open(input_file_name, O_RDONLY);
 			if (open_new_input == -1 ) {
 				perror("error opening file:");
@@ -184,12 +184,12 @@ struct command_line *parse_input()
 			
 		} else if(!strcmp(token,">")){
 			curr_command->output_file = strdup(strtok(NULL," \n"));
-			printf("command output catch: %s\n", curr_command->output_file);
+			//printf("command output catch: %s\n", curr_command->output_file);
 			output_file_name = (char *)malloc(strlen(curr_command->output_file) + 2);
 			//strcat(output_file_name, "\""); 
 			strcat(output_file_name, strdup(curr_command->output_file));
 			//strcat(output_file_name, "\""); 
-			printf("output file name: %s\n", output_file_name);
+			//printf("output file name: %s\n", output_file_name);
 			int open_new_output = open(output_file_name, O_WRONLY | O_CREAT | O_TRUNC, 0666);
 			if (open_new_output == -1 ) {
 				perror("error opening file:");
@@ -221,14 +221,15 @@ struct command_line *parse_input()
 		//printf("Command Count: %d\n", command_count);
 	}
 	
-	printf("ready to execute -%s-\n", executable);
+	//printf("ready to execute -%s-\n", executable);
+	//printf("curr input: %s | curr output: %s\n", input_file_name, output_file_name);
 	if (strcmp(executable, "status") == 0) {
 		status();
 	} else if (strlen(executable) > 0){
 	execute(curr_command);}
-	printf("resetting executable\n");
+	//printf("resetting executable\n");
 	executable[0] = '\0';
-	printf("executable is now -%s-\n", executable);
+	//printf("executable is now -%s-\n", executable);
 	close(new_out);
 	close(new_in);
 	return curr_command;
