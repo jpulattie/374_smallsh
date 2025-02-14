@@ -4,6 +4,7 @@
  * Do fix memory leaks and any additional issues you find.
  */
 
+#include <fcntl.h> 
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -115,6 +116,9 @@ struct command_line *parse_input()
 	// Tokenize the input
 	char *token = strtok(input, " \n");
 	char *directory = NULL;
+	char *input_file_name = NULL;
+	char *output_file_name = NULL;
+
 	while(token && breaker ==0){
 		//printf("token top of while loop: %s\n", token);
 		if (token[0] == '#' && command_count == 0) {
@@ -159,10 +163,32 @@ struct command_line *parse_input()
 		}
 		else if(!strcmp(token,"<")){
 			curr_command->input_file = strdup(strtok(NULL," \n"));
+			printf("command input catch: %s\n", curr_command->input_file);
+			input_file_name = (char *)malloc(strlen(curr_command->input_file) + 2);
+			strcat(input_file_name, "\""); 
+			strcat(input_file_name, strdup(curr_command->input_file)); 
+			strcat(input_file_name, "\""); 
+			printf("input file name: %s\n", input_file_name);
+
 			command_count++;
 			
 		} else if(!strcmp(token,">")){
 			curr_command->output_file = strdup(strtok(NULL," \n"));
+			printf("command output catch: %s\n", curr_command->output_file);
+			output_file_name = (char *)malloc(strlen(curr_command->output_file) + 2);
+			strcat(output_file_name, "\""); 
+			strcat(output_file_name, strdup(curr_command->output_file));
+			strcat(output_file_name, "\""); 
+			printf("output file name: %s\n", output_file_name);
+			int open_new = open(output_file_name, O_RDONLY);
+			if (open_new == -1 ) {
+				perror("error opening file:");
+				exit_status = 1;
+				//exit(1);
+			} else {
+				int new_out = dup2(open_new, 1);
+				printf("should be printing to new file?");
+			  }
 			command_count++;
 			
 		} else if(!strcmp(token,"&")){
@@ -184,14 +210,14 @@ struct command_line *parse_input()
 		//printf("running number: %d\n", running);
 		//printf("Command Count: %d\n", command_count);
 	}
-	//printf("ready to execute -%s-\n", executable);
+	printf("ready to execute -%s-\n", executable);
 	if (strcmp(executable, "status") == 0) {
 		status();
 	} else if (strlen(executable) > 0){
 	execute(curr_command);}
-	//printf("resetting executable\n");
+	printf("resetting executable\n");
 	executable[0] = '\0';
-	//printf("executable is now -%s-\n", executable);
+	printf("executable is now -%s-\n", executable);
 	return curr_command;
 }
 
