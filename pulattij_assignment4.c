@@ -90,22 +90,45 @@ int execute(struct command_line *ex)
 		exit(1);
 		break;
 	case 0:
+
+	/// NEED IF THENS TO CATCH IF THERE IS AN INPUT,OUTPUT, OR BOTH AND THEN EXECUTE ACCORDINGLY!!!!
+
+
 		printf("I am the child. My pid = %d Going to sleep now!\n", getpid());
 		printf("%s is executing\n", ex->argv[0]);
 		int open_new_input = open(input_file_name, O_RDONLY);
+		//int open_new_output = open(output_file_name, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+
 		printf("input file name: %s\n", input_file_name);
+		//printf("output file name: %s\n", output_file_name);
 		printf("checking file opened: %d\n", open_new_input);
+		/*
+			//output_file_name = (char *)malloc(strlen(curr_command->output_file) + 2);
+			// strcat(output_file_name, "\"");
+			//strcat(output_file_name, strdup(curr_command->output_file));
+			// strcat(output_file_name, "\"");
+			// 
+			
+*/
 			if (open_new_input == -1)
 			{
 				perror("error opening file:");
 				exit_status = 1;
 				break;
 			}
-			else
-			{
+			//if (open_new_output == -1)
+			//{
+			//	perror("error opening file:");
+			//	exit_status = 1;
+			//	break;
+			//}
+			else {
 				opened_new_in = 1;
 				new_in = dup2(open_new_input, 0);
 				printf("opened new input at: %s\n", input_file_name);
+				//opened_new_out = 1;
+				//new_out = dup2(open_new_output, 1);
+				//printf("opened new output at: %s\n", output_file_name);
 			}
 		execvp(ex->argv[0], ex->argv);
 
@@ -241,25 +264,6 @@ struct command_line *parse_input()
 			curr_command->output_file = strdup(strtok(NULL, " \n"));
 			printf("command output catch: %s\n", curr_command->output_file);
 			token = strtok(NULL, " \n");
-/*
-			//output_file_name = (char *)malloc(strlen(curr_command->output_file) + 2);
-			// strcat(output_file_name, "\"");
-			//strcat(output_file_name, strdup(curr_command->output_file));
-			// strcat(output_file_name, "\"");
-			// printf("output file name: %s\n", output_file_name);
-			//int open_new_output = open(output_file_name, O_WRONLY | O_CREAT | O_TRUNC, 0666);
-			if (open_new_output == -1)
-			{
-				perror("error opening file:");
-				exit_status = 1;
-				break;
-			}
-			else
-			{
-				opened_new_out = 1;
-				new_out = dup2(open_new_output, 1);
-				printf("opened new output at: %s\n", output_file_name);}
-*/
 			
 			command_count++;
 			printf("\nend of output chunk\n");
@@ -311,14 +315,14 @@ int main()
 	struct command_line *curr_command;
 	int i = 0;
 
-	while (running != 1 && i < 3)
+	while (running != 1)
 	{
 		// printf("running # in main: %d\n", running );
 		curr_command = parse_input();
 		printf("sent back to main\n");
 		//printf("Current command:\n. first arg: %s\n. arg count:%d\n. in: %s\n. out: %s\n", curr_command->argv[0], curr_command->argc, curr_command->input_file, curr_command->output_file);
 		printf("\n END OF MAIN LOOP- LOOPING AGAIN\n");
-		i++;
+		
 	}
 
 	return EXIT_SUCCESS;
