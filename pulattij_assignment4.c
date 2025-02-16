@@ -79,6 +79,7 @@ int execute(struct command_line *ex)
 	int childPid;
 	char *input_file_name = ex->input_file;
 	char *output_file_name = ex->output_file;
+	exit_status = 0;
 
 	if (input_file_name)
 	{
@@ -132,7 +133,9 @@ int execute(struct command_line *ex)
 				new_in = dup2(open_new_input, 0);
 			}
 		}
+	//printf("Trying to execute %s. Exit status is %d\n", ex->argv[0], exit_status);
 	if(exit_status != 1){
+		//printf("forking...");
 	spawnpid = fork();
 
 	switch (spawnpid)
@@ -147,9 +150,9 @@ int execute(struct command_line *ex)
 		//printf("%s is executing\n", ex->argv[0]);
 		
 			//printf("executable command: %s\n", ex->argv[0]);
-			//fflush(stdout);
+			fflush(stdout);
 			execvp(ex->argv[0], ex->argv);
-			fprintf(stderr, "%s\n", ex->argv[0]);
+			//fprintf(stderr, "%s\n", ex->argv[0]);
 			perror(ex->argv[0]);
 			_exit(1);
 
