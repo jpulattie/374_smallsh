@@ -90,20 +90,9 @@ int execute(struct command_line *ex)
 		output_file_name = strdup(ex->output_file);
 		//printf("output file name: %s\n", output_file_name);
 	}
-	spawnpid = fork();
-
-	switch (spawnpid)
-	{
-	case -1:
-		perror("fork() failed!");
-		exit_status = 1;
-		//exit(1);
-		break;
-	case 0:
-		//printf("I am the child. My pid = %d Going to sleep now!\n", getpid());
-		//printf("%s is executing\n", ex->argv[0]);
-		if (output_file_name)
+	if (output_file_name)
 		{
+			//printf("new output\n");
 			int open_new_output = open(output_file_name, O_WRONLY | O_CREAT | O_TRUNC, 0666);
 			//printf("output file name: %s\n", output_file_name);
 			//printf("output file name: %s\n", output_file_name);
@@ -120,8 +109,11 @@ int execute(struct command_line *ex)
 				new_out = dup2(open_new_output, 1);
 				//printf("opened new output at: %s\n", output_file_name);
 			}
+		}
 		if (input_file_name)
 		{
+			//printf("new input\n");
+
 			int open_new_input = open(input_file_name, O_RDONLY);
 			//printf("input file name: %s\n", input_file_name);
 			//printf("checking file opened: %d\n", open_new_input);
@@ -138,7 +130,24 @@ int execute(struct command_line *ex)
 				new_in = dup2(open_new_input, 0);
 			}
 		}
+	spawnpid = fork();
+
+	switch (spawnpid)
+	{
+	case -1:
+		perror("fork() failed!");
+		exit_status = 1;
+		//exit(1);
+		break;
+	case 0:
+		//printf("I am the child. My pid = %d Going to sleep now!\n", getpid());
+		//printf("%s is executing\n", ex->argv[0]);
+		
+			//printf("executable command: %s\n", ex->argv[0]);
+			//fflush(stdout);
 			execvp(ex->argv[0], ex->argv);
+			perror("exec failed:");
+			_exit(1);
 
 		default:
 			//printf("I am the parent. My pid = %d\n", getpid());
@@ -172,7 +181,7 @@ int execute(struct command_line *ex)
 			break; //
 		}
 		return 0;
-	}}
+	}
 
 	struct command_line *parse_input()
 	{
@@ -290,7 +299,7 @@ int execute(struct command_line *ex)
 
 		if (curr_command->argc > 0 && curr_command->is_internal != true)
 		{
-			//printf("executing\n");
+			//printf("executing %s\n", curr_command->argv[0]);
 			execute(curr_command);
 			//printf("back from execute\n");
 		}
