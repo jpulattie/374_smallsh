@@ -22,6 +22,8 @@ int new_out;
 int new_in;
 int exit_status;
 int running = 0;
+pid_t bg_processes[500];
+int bg_process_count = 0;
 struct command_line
 {
 	char *argv[MAX_ARGS + 1];
@@ -70,6 +72,25 @@ int status()
 	printf("exit value %d\n", exit_status);
 }
 
+int bg_check()
+{
+	int i;
+	int bg_status;
+	pid_t result;
+
+	for (i = 0; i < bg_process_count; i++)
+	{
+		result = waitpid(bg_processes[i], &bg_status, WNOHANG);
+		if (result > 0)
+		{
+			if (WIFEXITED(bg_status))
+			{
+				printf("background pid %d is done, exit value %d\n", result, exit_status);
+			}
+		}
+	}
+}
+
 int execute(struct command_line *ex)
 {
 	int og_stdin = dup(0);
@@ -84,62 +105,23 @@ int execute(struct command_line *ex)
 	if (input_file_name)
 	{
 		input_file_name = strdup(ex->input_file);
-		// printf("input file name: %s\n", input_file_name);
 	}
 	if (output_file_name)
 	{
 		output_file_name = strdup(ex->output_file);
-		// printf("output file name: %s\n", output_file_name);
 	}
-	if (output_file_name)
-	{
-		// printf("new output\n");
-		int open_new_output = open(output_file_name, O_WRONLY | O_CREAT | O_TRUNC, 0666);
-		// printf("output file name: %s\n", output_file_name);
-		// printf("output file name: %s\n", output_file_name);
-		// printf("checking file created/opened: %d\n", open_new_output);
-		if (open_new_output == -1)
-		{
-			perror("error with output file:");
-			exit_status = 1;
-			_exit(1);
-		}
-		else
-		{
-			opened_new_out = 1;
-			new_out = dup2(open_new_output, 1);
-			// printf("opened new output at: %s\n", output_file_name);
-		}
-	}
-	if (input_file_name)
-	{
-		// printf("new input\n");
+	// printf("Bool BG %d", ex->is_bg);
+	//  printf("input = %s || output = %s\n", input_file_name, output_file_name);
 
-		int open_new_input = open(input_file_name, O_RDONLY);
-		// printf("input file name: %s\n", input_file_name);
-		// printf("checking file opened: %d\n", open_new_input);
-		if (open_new_input == -1)
-		{
-			printf("cannot open %s for input\n", ex->input_file);
-			exit_status = 1;
-			//_exit(1);
+	// ex->is_bg = 1 when & is present(background), 0 when not present(foreground)
+	//! input_file_name = 0 when there is an input file, 1 when there is no input
+	//! output_file_name = 0 when there is an output file, 1 when there is no input
 
-			// when badfile is pushed through here it breaks
-		}
-
-		else
-		{
-			opened_new_in = 1;
-			new_in = dup2(open_new_input, 0);
-		}
-	}
 	// printf("Trying to execute %s. Exit status is %d\n", ex->argv[0], exit_status);
-	if (exit_status != 1)
-	{
-		// printf("forking...");
 
-		if (ex->is_bg == 0){
-			//printf("Bool BG is true\n");
+	if (ex->is_bg == 0)
+	{
+		// FOREGROUND PROCESS
 		spawnpid = fork();
 
 		switch (spawnpid)
@@ -155,10 +137,53 @@ int execute(struct command_line *ex)
 
 			// printf("executable command: %s\n", ex->argv[0]);
 			fflush(stdout);
+			if (output_file_name)
+			{
+				// printf("new output\n");
+				int open_new_output = open(output_file_name, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+				// printf("output file name: %s\n", output_file_name);
+				// printf("output file name: %s\n", output_file_name);
+				// printf("checking file created/opened: %d\n", open_new_output);
+				if (open_new_output == -1)
+				{
+					perror("error with output file:");
+					exit_status = 1;
+					_exit(1);
+				}
+				else
+				{
+					opened_new_out = 1;
+					new_out = dup2(open_new_output, 1);
+					// printf("opened new output at: %s\n", output_file_name);
+				}
+			}
+			if (input_file_name)
+			{
+				// printf("new input\n");
+
+				int open_new_input = open(input_file_name, O_RDONLY);
+				// printf("input file name: %s\n", input_file_name);
+				// printf("checking file opened: %d\n", open_new_input);
+				if (open_new_input == -1)
+				{
+					printf("cannot open %s for input\n", ex->input_file);
+					exit_status = 1;
+					_exit(1);
+					break;
+					// when badfile is pushed through here it breaks
+				}
+
+				else
+				{
+					opened_new_in = 1;
+					new_in = dup2(open_new_input, 0);
+				}
+			}
 			execvp(ex->argv[0], ex->argv);
 			// fprintf(stderr, "%s\n", ex->argv[0]);
 			perror(ex->argv[0]);
 			_exit(1);
+			break;
 
 		default:
 			// printf("I am the parent. My pid = %d\n", getpid());
@@ -190,10 +215,13 @@ int execute(struct command_line *ex)
 
 			// printf("Parent's waiting is done as the child with pid %d exited\n", childPid);
 			break; //
-		}}
-		if (ex->is_bg != 0){
-			//printf("Bool BG is false\n");
-			spawnpid = fork();
+		}
+	}
+	if (ex->is_bg != 0)
+	{
+		// BACKGROUND PROCESS
+
+		spawnpid = fork();
 
 		switch (spawnpid)
 		{
@@ -203,28 +231,117 @@ int execute(struct command_line *ex)
 			// exit(1);
 			break;
 		case 0:
-			printf("Background pid is %d\n", getpid());
+			fflush(stdout);
+
+			//printf("\nBackground pid is %d\n", getpid());
 			// printf("%s is executing\n", ex->argv[0]);
 
 			// printf("executable command: %s\n", ex->argv[0]);
 			fflush(stdout);
-			//printf("child started\n");
-			sleep(10);
-			printf("\n");
+			// printf("child started\n");
+			sleep(15);
+			//printf("right before process runs\n");
+			if (output_file_name)
+			{
+				// printf("new output\n");
+				int open_new_output = open(output_file_name, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+				// printf("output file name: %s\n", output_file_name);
+				// printf("output file name: %s\n", output_file_name);
+				// printf("checking file created/opened: %d\n", open_new_output);
+				if (open_new_output == -1)
+				{
+					perror("error with output file:");
+					exit_status = 1;
+					_exit(1);
+				}
+				else
+				{
+					opened_new_out = 1;
+					new_out = dup2(open_new_output, 1);
+					// printf("opened new output at: %s\n", output_file_name);
+				}
+			}
+			if (input_file_name)
+			{
+				// printf("new input\n");
+
+				int open_new_input = open(input_file_name, O_RDONLY);
+				// printf("input file name: %s\n", input_file_name);
+				// printf("checking file opened: %d\n", open_new_input);
+				if (open_new_input == -1)
+				{
+					printf("cannot open %s for input\n", ex->input_file);
+					exit_status = 1;
+					//_exit(1);
+
+					// when badfile is pushed through here it breaks
+				}
+
+				else
+				{
+					opened_new_in = 1;
+					new_in = dup2(open_new_input, 0);
+				}
+			}
+			if (!input_file_name != 0 && ex->is_bg != 0)
+			{
+				// printf("set input to dev null\n");
+				int open_new_input = open("/dev/null", O_RDONLY);
+				// printf("input file name: %s\n", input_file_name);
+				// printf("checking file opened: %d\n", open_new_input);
+				if (open_new_input == -1)
+				{
+					// printf("cannot open %s for input\n", ex->input_file);
+					exit_status = 1;
+					//_exit(1);
+				}
+
+				else
+				{
+					opened_new_in = 1;
+					new_in = dup2(open_new_input, 0);
+					// printf("opened new input at: /dev/null\n");
+				}
+			}
+			if (!output_file_name != 0 && ex->is_bg != 0)
+			{
+				// printf("set output to dev null\n");
+				//  printf("new output\n");
+				int open_new_output = open("/dev/null", O_WRONLY);
+				// printf("output file name: %s\n", output_file_name);
+				// printf("output file name: %s\n", output_file_name);
+				// printf("checking file created/opened: %d\n", open_new_output);
+				if (open_new_output == -1)
+				{
+					perror("error with output file:");
+					exit_status = 1;
+					_exit(1);
+				}
+				else
+				{
+					opened_new_out = 1;
+					// printf("opening new output at: /dev/null\n");
+					new_out = dup2(open_new_output, 1);
+				}
+			}
 			execvp(ex->argv[0], ex->argv);
 			// fprintf(stderr, "%s\n", ex->argv[0]);
 			perror(ex->argv[0]);
 			_exit(1);
-			
+			return 0;
 
 		default:
-			// printf("I am the parent. My pid = %d\n", getpid());
+			//printf("I am the parent. My pid = %d\n", getpid());
+			printf("Background pid is %d\n", spawnpid);
+			bg_processes[bg_process_count] = spawnpid;
+			bg_process_count++;
+
 			childPid = waitpid(spawnpid, &childStatus, WNOHANG);
 			if (WIFEXITED(childStatus))
 			{
 				exit_status = WEXITSTATUS(childStatus);
 			}
-			// printf("%s was executed\n", ex->argv[0]);
+			//printf("%s was executed\n", ex->argv[0]);
 			// printf("input/output tracking = %d\n", opened_new_in);
 			if (opened_new_in == 1)
 			{
@@ -246,11 +363,14 @@ int execute(struct command_line *ex)
 			// printf("exit status: %d\n", exit_status);
 
 			//printf("Parent's waiting is done, child %d is running\n", childPid);
-			//printf(": \n");
-			break; //
-		}}
-		return 0;
+			// printf(": \n");
+			fflush(stdout);
+
+			return 0; //
+		}
 	}
+	
+	return 0;
 }
 
 struct command_line *parse_input()
@@ -268,19 +388,22 @@ struct command_line *parse_input()
 	// printf("\nINPUT: -%s-\n", input);
 
 	// Get input
+	bg_check();
+	//printf("before input\n");
 	printf(": ");
-	fflush(stdout);
 	fgets(input, INPUT_LENGTH, stdin);
 	// printf("\nNEW INPUT: -%s-\n", input);
 	//  Tokenize the input
 	char *token = strtok(input, " \n");
 	char *directory = NULL;
-
+	//printf("TOP OF INPUT LOOP\n");
+	//printf("breaker = %d\n", breaker);
 	while (token && breaker == 0)
 	{
 		// printf("ITERATIONS: %d\n", iterations);
 		iterations = iterations + 1;
-		// printf("token top of while loop: -%s-\n", token);
+		//printf("token top of while loop: -%s-\n", token);
+		//printf("exit token? %d\n",strcmp(token, "exit"));
 		if (token[0] == '#' && command_count == 0)
 		{
 			// printf("found comment: %s\n", token);
@@ -289,15 +412,18 @@ struct command_line *parse_input()
 				token = strtok(NULL, "\n");
 			}
 		}
-		else if ((token[0] != '#' || command_count != 0) && (strcmp(token, "exit") == 0))
+		else if (strcmp(token, "exit") == 0)
 		{
-			// printf("token: %s\n", token);
+			//printf("exit token: %s\n", token);
 			command_count++;
 			curr_command->is_internal = true;
 			// printf("exit indicator: %d\n", (strcmp(token, "exit") == 0));
 			running = 1;
+			//printf("running = %d\n", running);
 			// printf("EXITING\n");
 			breaker = 1;
+			//printf("breaker = %d\n", breaker);
+
 			break;
 		}
 		else if (strcmp(token, "cd") == 0)
@@ -375,7 +501,7 @@ struct command_line *parse_input()
 	}
 	if (curr_command->is_internal == true)
 	{
-		// printf("one of three built in commands\n");
+		//printf("one of three built in commands\n");
 	}
 
 	// if (curr_command->argv[0] && (strcmp(curr_command->argv[0], "status") == 0))
@@ -392,11 +518,14 @@ int main()
 
 	while (running != 1)
 	{
+		//printf("Main 1 runnning %d\n", running);
 		// printf("running # in main: %d\n", running );
 		curr_command = parse_input();
 		// printf("sent back to main\n");
 		//  printf("Current command:\n. first arg: %s\n. arg count:%d\n. in: %s\n. out: %s\n", curr_command->argv[0], curr_command->argc, curr_command->input_file, curr_command->output_file);
 		// printf("\n END OF MAIN LOOP- LOOPING AGAIN\n");
+		//printf("Main 2 runnning %d\n", running);
+
 	}
 
 	return EXIT_SUCCESS;
