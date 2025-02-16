@@ -119,9 +119,9 @@ int execute(struct command_line *ex)
 			//printf("checking file opened: %d\n", open_new_input);
 			if (open_new_input == -1)
 			{
-				perror("error opening file:");
+				printf("cannot open %s for input\n", ex->input_file);
 				exit_status = 1;
-				_exit(1);
+				//_exit(1);
 			}
 
 			else
