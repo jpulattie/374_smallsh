@@ -122,6 +122,8 @@ int execute(struct command_line *ex)
 				printf("cannot open %s for input\n", ex->input_file);
 				exit_status = 1;
 				//_exit(1);
+				
+				//when badfile is pushed through here it breaks
 			}
 
 			else
@@ -130,6 +132,7 @@ int execute(struct command_line *ex)
 				new_in = dup2(open_new_input, 0);
 			}
 		}
+	if(exit_status != 1){
 	spawnpid = fork();
 
 	switch (spawnpid)
@@ -182,7 +185,7 @@ int execute(struct command_line *ex)
 			break; //
 		}
 		return 0;
-	}
+	}}
 
 	struct command_line *parse_input()
 	{
