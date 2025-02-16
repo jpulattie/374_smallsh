@@ -203,7 +203,7 @@ int execute(struct command_line *ex)
 			// exit(1);
 			break;
 		case 0:
-			// printf("I am the child. My pid = %d Going to sleep now!\n", getpid());
+			printf("Background pid is %d\n", getpid());
 			// printf("%s is executing\n", ex->argv[0]);
 
 			// printf("executable command: %s\n", ex->argv[0]);
