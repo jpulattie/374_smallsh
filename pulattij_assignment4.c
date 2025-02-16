@@ -146,7 +146,8 @@ int execute(struct command_line *ex)
 			//printf("executable command: %s\n", ex->argv[0]);
 			//fflush(stdout);
 			execvp(ex->argv[0], ex->argv);
-			perror("exec failed:");
+			fprintf(stderr, "%s\n", ex->argv[0]);
+			perror(ex->argv[0]);
 			_exit(1);
 
 		default:
