@@ -16,6 +16,7 @@
 #define INPUT_LENGTH 2048
 #define MAX_ARGS 512
 
+int toggle = 0;
 pid_t parent_shell;
 int current_process;
 int bg_process = 0;
@@ -41,7 +42,33 @@ struct command_line
 };
 
 
+void toggle_handler(int sig) {
+	//fflush(stdout);
+	if (toggle == 0){
+		toggle = 1;
+		char* message = "Entering foreground-only mode (& is now ignored)\n";
+		//write(STDOUT_FILENO, message, 49);
+		printf("%s\n", message);
+	}
+	else if (toggle == 1){
+		toggle = 0;
+		char* message = "Exiting foreground-only mode\n";
+		//write(STDOUT_FILENO, message, 28);
+		printf("%s\n", message);
+	}
+	//fflush(stdout);
 
+	
+}
+
+void handler2(int sig) {
+	int i;
+	int bg_status;
+	pid_t result;
+	char* message = "terminated by signal 2!\n";
+	write(STDOUT_FILENO, message, 23);
+	
+}
 
 void handler(int sig) {
 	int i;
@@ -50,16 +77,16 @@ void handler(int sig) {
 	char* message = "terminated by signal 2\n";
 	write(STDOUT_FILENO, message, 23);
 
-/*
+
 	printf("fg_process = %d -- pid is %d\n", fg_process, getpid());
-	if (fg_process ==1){
+	if (getpid() != parent_shell){
 
 		signal(SIGINT, SIG_DFL);
 	} else {
 		signal(SIGINT, SIG_IGN);
 		printf("%d ignored ctrl + c", getpid());
 	}
-*/
+
 }
 
 int cd(char *directory)
@@ -167,7 +194,13 @@ int execute(struct command_line *ex)
 			//printf("I am the child. My pid = %d Going to sleep now!\n", getpid());
 			//printf("Child pid? %d\n", getpid());
 			current_process = getpid();
+			printf("pid to kill: %d\n", getpid());
+
 			fg_process = 1;
+			struct sigaction SIGINT_action2 = {0};
+			SIGINT_action2.sa_handler = handler2;
+			sigemptyset(&SIGINT_action2.sa_mask);
+			SIGINT_action2.sa_flags = 0;
 			//printf("current process: %d\n", current_process);
 			//printf("fg process marker: %d\n", fg_process);
 			
@@ -177,6 +210,10 @@ int execute(struct command_line *ex)
 
 			// printf("executable command: %s\n", ex->argv[0]);
 			fflush(stdout);
+			//if (setpgid(0, 0) == -1) {
+			//	perror("Failed to set process group for child");
+			//	_exit(1);
+			//}
 
 			if (output_file_name)
 			{
@@ -436,6 +473,7 @@ struct command_line *parse_input()
 	// Get input
 	bg_check();
 	//printf("before input\n");
+	fflush(stdout);
 	printf(": ");
 	fgets(input, INPUT_LENGTH, stdin);
 	// printf("\nNEW INPUT: -%s-\n", input);
@@ -522,7 +560,7 @@ struct command_line *parse_input()
 			// printf("command output catch: %s\n", curr_command->output_file);
 			command_count++;
 		}
-		else if (!strcmp(token, "&"))
+		else if (!strcmp(token, "&") && toggle == 0)
 		{
 			curr_command->is_bg = true;
 			command_count++;
@@ -567,6 +605,12 @@ int main()
 	sigfillset(&SIGINT_action.sa_mask);
 	SIGINT_action.sa_flags = 0;
 	sigaction(SIGINT, &SIGINT_action, NULL);
+
+	struct sigaction SIGTSTP_action = {0};
+	SIGTSTP_action.sa_handler = toggle_handler;
+	sigfillset(&SIGTSTP_action.sa_mask);
+	SIGTSTP_action.sa_flags = 0;
+	sigaction(SIGTSTP, &SIGTSTP_action, NULL);
 
 
 	//signal(SIGINT, handler);
