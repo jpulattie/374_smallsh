@@ -3,7 +3,7 @@
  * feel free to adapt this code for Assignment 4.
  * Do fix memory leaks and any additional issues you find.
  */
-
+#include <signal.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -16,6 +16,10 @@
 #define INPUT_LENGTH 2048
 #define MAX_ARGS 512
 
+pid_t parent_shell;
+int current_process;
+int bg_process = 0;
+int fg_process = 0;
 int opened_new_out = 0;
 int opened_new_in = 0;
 int new_out;
@@ -24,6 +28,8 @@ int exit_status;
 int running = 0;
 pid_t bg_processes[500];
 int bg_process_count = 0;
+pid_t fg_processes[500];
+int fg_process_count;
 struct command_line
 {
 	char *argv[MAX_ARGS + 1];
@@ -33,6 +39,28 @@ struct command_line
 	bool is_bg;
 	bool is_internal;
 };
+
+
+
+
+void handler(int sig) {
+	int i;
+	int bg_status;
+	pid_t result;
+	char* message = "terminated by signal 2\n";
+	write(STDOUT_FILENO, message, 23);
+
+/*
+	printf("fg_process = %d -- pid is %d\n", fg_process, getpid());
+	if (fg_process ==1){
+
+		signal(SIGINT, SIG_DFL);
+	} else {
+		signal(SIGINT, SIG_IGN);
+		printf("%d ignored ctrl + c", getpid());
+	}
+*/
+}
 
 int cd(char *directory)
 {
@@ -81,11 +109,15 @@ int bg_check()
 	for (i = 0; i < bg_process_count; i++)
 	{
 		result = waitpid(bg_processes[i], &bg_status, WNOHANG);
+		//printf("bg process result: %d\n", result);
 		if (result > 0)
 		{
 			if (WIFEXITED(bg_status))
 			{
-				printf("background pid %d is done, exit value %d\n", result, exit_status);
+				printf("background pid %d is done: exit value %d\n", result, exit_status);
+			}
+			if (WIFSIGNALED(bg_status)) {
+				printf("background pid %d is done: terminated by signal %d\n", result, WTERMSIG(bg_status));
 			}
 		}
 	}
@@ -132,11 +164,20 @@ int execute(struct command_line *ex)
 			// exit(1);
 			break;
 		case 0:
-			// printf("I am the child. My pid = %d Going to sleep now!\n", getpid());
+			//printf("I am the child. My pid = %d Going to sleep now!\n", getpid());
+			//printf("Child pid? %d\n", getpid());
+			current_process = getpid();
+			fg_process = 1;
+			//printf("current process: %d\n", current_process);
+			//printf("fg process marker: %d\n", fg_process);
+			
+			//printf("spawn pid: %d\n", getpid());
+			//printf("process count: %d\n", fg_process_count);
 			// printf("%s is executing\n", ex->argv[0]);
 
 			// printf("executable command: %s\n", ex->argv[0]);
 			fflush(stdout);
+
 			if (output_file_name)
 			{
 				// printf("new output\n");
@@ -179,6 +220,7 @@ int execute(struct command_line *ex)
 					new_in = dup2(open_new_input, 0);
 				}
 			}
+
 			execvp(ex->argv[0], ex->argv);
 			// fprintf(stderr, "%s\n", ex->argv[0]);
 			perror(ex->argv[0]);
@@ -186,8 +228,11 @@ int execute(struct command_line *ex)
 			break;
 
 		default:
-			// printf("I am the parent. My pid = %d\n", getpid());
+			//printf("I am the parent. My pid = %d\n", getpid());
+			//printf("current process: %d\n", current_process);
+			//printf("fg process marker: %d\n", fg_process);
 			childPid = waitpid(spawnpid, &childStatus, 0);
+
 			if (WIFEXITED(childStatus))
 			{
 				exit_status = WEXITSTATUS(childStatus);
@@ -232,7 +277,8 @@ int execute(struct command_line *ex)
 			break;
 		case 0:
 			fflush(stdout);
-
+			current_process = getpid();
+			bg_process = 1;
 			//printf("\nBackground pid is %d\n", getpid());
 			// printf("%s is executing\n", ex->argv[0]);
 
@@ -332,7 +378,7 @@ int execute(struct command_line *ex)
 
 		default:
 			//printf("I am the parent. My pid = %d\n", getpid());
-			printf("Background pid is %d\n", spawnpid);
+			//printf("Background pid is %d\n", spawnpid);
 			bg_processes[bg_process_count] = spawnpid;
 			bg_process_count++;
 
@@ -516,6 +562,16 @@ int main()
 	struct command_line *curr_command;
 	int i = 0;
 
+	struct sigaction SIGINT_action = {0};
+	SIGINT_action.sa_handler = handler;
+	sigfillset(&SIGINT_action.sa_mask);
+	SIGINT_action.sa_flags = 0;
+	sigaction(SIGINT, &SIGINT_action, NULL);
+
+
+	//signal(SIGINT, handler);
+	parent_shell = getpid();
+	//printf("parent shell pid: %d\n", parent_shell);
 	while (running != 1)
 	{
 		//printf("Main 1 runnning %d\n", running);
