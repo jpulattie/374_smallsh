@@ -378,7 +378,7 @@ int execute(struct command_line *ex)
 
 		default:
 			//printf("I am the parent. My pid = %d\n", getpid());
-			//printf("Background pid is %d\n", spawnpid);
+			printf("Background pid is %d\n", spawnpid);
 			bg_processes[bg_process_count] = spawnpid;
 			bg_process_count++;
 
