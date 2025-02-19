@@ -73,48 +73,11 @@ void toggle_handler(int sig) {
 	
 }
 
-
 void handler(int sig) {
-	int j = 0;
-	int k=0;
-	pid_t result;
-	char* message = "terminated by signal 2\n";
+	//char* message = "terminated by signal 2\n";
 	//printf("setting update status\n");
 	exit_status = 3;
 	//write(STDOUT_FILENO, message, 23);
-
-	//printf("handler func. pid is %d\n", getpid());
-	//printf("handler Process foreground pid is %d\n", foreground_pid);
-	if (getpid() == foreground_pid){
-		write(STDOUT_FILENO, message, 23);
-		
-		raise(SIGINT);
-
-		
-	} else if (getpid() == parent_shell) {
-		if (foreground_pid > 0){
-		signal(SIGINT, SIG_IGN);
-		waitpid(foreground_pid, NULL, 0);
-		foreground_pid = -1;
-	}
-	} else {
-		signal(SIGINT, SIG_IGN);
-	}
-	/*for (k; k < fg_process_count; k++){
-		
-		if (fg_processes[k] > 0 &&  getpid() != parent_shell && getpid() == fg_processes[k]){
-			printf("FOUND\n");
-			write(STDOUT_FILENO, message, 23);
-			signal(SIGINT, SIG_DFL);
-			waitpid(fg_processes[k], NULL, 0);
-			fg_processes[k] = -1;
-
-		}
-		else {
-			signal(SIGINT, SIG_IGN);
-		}
-	}*/
-
 	}
 
 
@@ -231,6 +194,7 @@ int execute(struct command_line *ex)
 			//printf("pid to kill: %d\n", getpid());
 			//printf("Child process pid %d. Parent process variable: %d\n", getpid(), parent_shell);
 			fg_process = 1;
+			signal(SIGINT, SIG_DFL);
 			//struct sigaction SIGINT_action2 = {0};
 			//SIGINT_action2.sa_handler = handler2;
 			//sigemptyset(&SIGINT_action2.sa_mask);
@@ -307,8 +271,12 @@ int execute(struct command_line *ex)
 			//printf("fg process marker: %d\n", fg_process);
 			childPid = waitpid(spawnpid, &childStatus, 0);
 			
-
+			//printf("wifexited status: %d\n", WIFEXITED(childStatus));
+			//printf("signal that killed process %d\n", WTERMSIG(childStatus));
 			//printf("parent process %d of child %d\n", getpid(), childPid);
+			if (WTERMSIG(childStatus) == 2){
+				status();
+			}
 			if (WIFEXITED(childStatus))
 			{
 				
