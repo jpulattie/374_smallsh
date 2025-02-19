@@ -18,6 +18,7 @@
 
 int toggle = 0;
 pid_t parent_shell;
+pid_t foreground_pid;
 int current_process;
 int bg_process = 0;
 int fg_process = 0;
@@ -25,7 +26,8 @@ int opened_new_out = 0;
 int opened_new_in = 0;
 int new_out;
 int new_in;
-int exit_status;
+char *exit_status_msg = NULL;
+int exit_status = 0;
 int running = 0;
 pid_t bg_processes[500];
 int bg_process_count = 0;
@@ -40,6 +42,16 @@ struct command_line
 	bool is_bg;
 	bool is_internal;
 };
+
+int status () {
+	if ( exit_status == 0) {
+		printf("exit status 0\n");
+	} else if (exit_status == 1){
+		printf("exit status 1\n");
+	} else if (exit_status == 3){
+		printf("terminated by signal 2\n");
+	}
+}
 
 
 void toggle_handler(int sig) {
@@ -61,67 +73,51 @@ void toggle_handler(int sig) {
 	
 }
 
-void handler2(int sig) {
-	int i;
-	int bg_status;
-	pid_t result;
-	char* message = "terminated by signal 2!\n";
-	write(STDOUT_FILENO, message, 23);
-	
-}
-
-// the only ones that I need to recognize and execute the sigint are foreground children.  loop through the fg process
-// array and assign only those to use sigdflt?????
-
 
 void handler(int sig) {
 	int j = 0;
 	int k=0;
 	pid_t result;
 	char* message = "terminated by signal 2\n";
-	write(STDOUT_FILENO, message, 23);
-	printf("\nSTART OF HANDLER\n");
-	printf("process  pid is %d\n", getpid());
-	
-	//printf("bg process count: %d\n", bg_process_count);
+	//printf("setting update status\n");
+	exit_status = 3;
+	//write(STDOUT_FILENO, message, 23);
 
-	for (k; k < fg_process_count; k++){
-		if (fg_processes[j] > 0 || getpid() == parent_shell ){
-			//printf("bg process: %d | current process %d\n", fg_processes[k], getpid());
-			printf("%d ignored ctrl + c\n", getpid());
-			signal(SIGINT, SIG_IGN);
+	//printf("handler func. pid is %d\n", getpid());
+	//printf("handler Process foreground pid is %d\n", foreground_pid);
+	if (getpid() == foreground_pid){
+		write(STDOUT_FILENO, message, 23);
+		
+		raise(SIGINT);
+
+		
+	} else if (getpid() == parent_shell) {
+		if (foreground_pid > 0){
+		signal(SIGINT, SIG_IGN);
+		waitpid(foreground_pid, NULL, 0);
+		foreground_pid = -1;
+	}
+	} else {
+		signal(SIGINT, SIG_IGN);
+	}
+	/*for (k; k < fg_process_count; k++){
+		
+		if (fg_processes[k] > 0 &&  getpid() != parent_shell && getpid() == fg_processes[k]){
+			printf("FOUND\n");
+			write(STDOUT_FILENO, message, 23);
+			signal(SIGINT, SIG_DFL);
+			waitpid(fg_processes[k], NULL, 0);
+			fg_processes[k] = -1;
+
 		}
 		else {
-			
-			signal(SIGINT, SIG_DFL);
-			waitpid(-1, NULL, WNOHANG);
-		}
-	}
-	for (j; j < bg_process_count; j++){
-		if (bg_processes[j] > 0 || getpid() == parent_shell ){
-			//printf("bg process: %d | current process %d\n", bg_processes[j], getpid());
-			printf("%d ignored ctrl + c\n", getpid());
 			signal(SIGINT, SIG_IGN);
 		}
-		else {
-			
-			signal(SIGINT, SIG_DFL);
-			waitpid(-1, NULL, WNOHANG);
-		}
-	}
+	}*/
+
 	}
 
-/*
-for (i; i < bg_process_count; i++){
-				if (bg_processes[i] > 0){
-				printf("bg process: %d",bg_processes[i]);
-				}
-				else {
-					printf("no pids at array[%d]\n", i);
-				}
-				printf("i = %d\n", i);
-			}
-*/
+
 
 int cd(char *directory)
 {
@@ -155,11 +151,7 @@ int cd(char *directory)
 	return 0;
 }
 
-int status()
-{
 
-	printf("exit value %d\n", exit_status);
-}
 
 int bg_check()
 {
@@ -175,7 +167,7 @@ int bg_check()
 		{
 			if (WIFEXITED(bg_status))
 			{
-				printf("background pid %d is done: exit value %d\n", result, exit_status);
+				printf("background pid %d is done: %s %d\n", result, exit_status_msg, exit_status);
 			}
 			if (WIFSIGNALED(bg_status)) {
 				printf("background pid %d is done: terminated by signal %d\n", result, WTERMSIG(bg_status));
@@ -221,6 +213,7 @@ int execute(struct command_line *ex)
 		{
 		case -1:
 			perror("fork() failed!");
+			//update_status("exit status 1");
 			exit_status = 1;
 			// exit(1);
 			break;
@@ -230,6 +223,11 @@ int execute(struct command_line *ex)
 			current_process = getpid();
 			fg_processes[fg_process_count] = getpid();
 			fg_process_count++;
+			//printf("\nForeground pid %d\n", foreground_pid);
+			foreground_pid = getpid();
+			//printf("\nForeground pid %d\n", foreground_pid);
+
+			
 			//printf("pid to kill: %d\n", getpid());
 			//printf("Child process pid %d. Parent process variable: %d\n", getpid(), parent_shell);
 			fg_process = 1;
@@ -293,7 +291,7 @@ int execute(struct command_line *ex)
 					new_in = dup2(open_new_input, 0);
 				}
 			}
-			printf("pid of current process: %d\n", getpid());
+			//printf("pid of current process: %d\n", getpid());
 
 			execvp(ex->argv[0], ex->argv);
 			// fprintf(stderr, "%s\n", ex->argv[0]);
@@ -302,14 +300,20 @@ int execute(struct command_line *ex)
 			break;
 
 		default:
+			foreground_pid = spawnpid;
+			//printf("child pid being set to foreground pid is %d\n", spawnpid);
 			//printf("I am the parent. My pid = %d\n", getpid());
 			//printf("current process: %d\n", current_process);
 			//printf("fg process marker: %d\n", fg_process);
 			childPid = waitpid(spawnpid, &childStatus, 0);
-			printf("parent process %d of child %d\n", getpid(), childPid);
+			
+
+			//printf("parent process %d of child %d\n", getpid(), childPid);
 			if (WIFEXITED(childStatus))
 			{
+				
 				exit_status = WEXITSTATUS(childStatus);
+				
 			}
 			// printf("%s was executed\n", ex->argv[0]);
 			// printf("input/output tracking = %d\n", opened_new_in);
@@ -332,7 +336,7 @@ int execute(struct command_line *ex)
 			// exit_status = 1;
 			// printf("exit status: %d\n", exit_status);
 
-			printf("Parent's waiting is done as the child with pid %d exited\n", childPid);
+			//printf("Parent's waiting is done as the child with pid %d exited\n", childPid);
 			break; //
 		}
 	}
@@ -362,7 +366,7 @@ int execute(struct command_line *ex)
 			// printf("executable command: %s\n", ex->argv[0]);
 			fflush(stdout);
 			// printf("child started\n");
-			sleep(15);
+			//sleep(15);
 			//printf("right before process runs\n");
 			if (output_file_name)
 			{
@@ -448,8 +452,8 @@ int execute(struct command_line *ex)
 				}
 			}
 			//printf("Child process. Parent process variable: %d", parent_shell);
-			printf("pid of current process: %d\n", getpid());
-			printf("bg process count %d\n", bg_process_count);
+			//printf("pid of current process: %d\n", getpid());
+			//printf("bg process count %d\n", bg_process_count);
 			int i =0;
 			for (i; i < bg_process_count; i++){
 				if (bg_processes[i] > 0){
@@ -471,7 +475,7 @@ int execute(struct command_line *ex)
 			printf("Background pid is %d\n", spawnpid);
 			bg_processes[bg_process_count] = spawnpid;
 			bg_process_count++;
-			printf("parent process %d of child %d\n", getpid(), childPid);
+			//printf("parent process %d of child %d\n", getpid(), childPid);
 
 			childPid = waitpid(spawnpid, &childStatus, WNOHANG);
 			if (WIFEXITED(childStatus))
@@ -657,7 +661,7 @@ int main()
 	struct sigaction SIGINT_action = {0};
 	SIGINT_action.sa_handler = handler;
 	sigfillset(&SIGINT_action.sa_mask);
-	SIGINT_action.sa_flags = SA_NOCLDWAIT;
+	SIGINT_action.sa_flags = 0;
 	sigaction(SIGINT, &SIGINT_action, NULL);
 
 	struct sigaction SIGTSTP_action = {0};
@@ -669,7 +673,7 @@ int main()
 
 	//signal(SIGINT, handler);
 	parent_shell = getpid();
-	printf("parent shell pid: %d\n", parent_shell);
+	//printf("parent shell pid: %d\n", parent_shell);
 	while (running != 1)
 	{
 		//printf("Main 1 runnning %d\n", running);
