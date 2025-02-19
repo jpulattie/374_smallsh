@@ -661,7 +661,7 @@ int main()
 	struct sigaction SIGINT_action = {0};
 	SIGINT_action.sa_handler = handler;
 	sigfillset(&SIGINT_action.sa_mask);
-	SIGINT_action.sa_flags = 0;
+	SIGINT_action.sa_flags = SA_RESTART;
 	sigaction(SIGINT, &SIGINT_action, NULL);
 
 	struct sigaction SIGTSTP_action = {0};
