@@ -586,10 +586,15 @@ struct command_line *parse_input()
 			// printf("command output catch: %s\n", curr_command->output_file);
 			command_count++;
 		}
-		else if (!strcmp(token, "&") && toggle == 0)
+		else if (!strcmp(token, "&"))
 		{
+			if (toggle == 0) {
 			curr_command->is_bg = true;
 			command_count++;
+			} else if (toggle == 1) {
+				token = strtok(NULL, " \n");
+
+			}
 		}
 		else
 		{
