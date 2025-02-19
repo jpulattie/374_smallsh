@@ -26,7 +26,6 @@ int opened_new_out = 0;
 int opened_new_in = 0;
 int new_out;
 int new_in;
-char *exit_status_msg = NULL;
 int exit_status = 0;
 int running = 0;
 pid_t bg_processes[500];
@@ -58,15 +57,18 @@ void toggle_handler(int sig) {
 	//fflush(stdout);
 	if (toggle == 0){
 		toggle = 1;
-		char* message = "Entering foreground-only mode (& is now ignored)\n";
-		//write(STDOUT_FILENO, message, 49);
-		printf("%s\n", message);
+		char* message = "\nEntering foreground-only mode (& is now ignored)\n";
+		write(STDOUT_FILENO, message, 50);
+		//printf("\n%s\n", message);
+		fflush(stdout);
 	}
 	else if (toggle == 1){
 		toggle = 0;
-		char* message = "Exiting foreground-only mode\n";
-		//write(STDOUT_FILENO, message, 28);
-		printf("%s\n", message);
+		char* message2 = "\nExiting foreground-only mode\n";
+		write(STDOUT_FILENO, message2, 29);
+		//printf("\n%s\n", message2);
+		fflush(stdout);
+
 	}
 	//fflush(stdout);
 
@@ -130,7 +132,7 @@ int bg_check()
 		{
 			if (WIFEXITED(bg_status))
 			{
-				printf("background pid %d is done: %s %d\n", result, exit_status_msg, exit_status);
+				printf("background pid %d is done: exit status %d\n", result,  exit_status);
 			}
 			if (WIFSIGNALED(bg_status)) {
 				printf("background pid %d is done: terminated by signal %d\n", result, WTERMSIG(bg_status));
@@ -592,7 +594,7 @@ struct command_line *parse_input()
 			curr_command->is_bg = true;
 			command_count++;
 			} else if (toggle == 1) {
-				token = strtok(NULL, " \n");
+				curr_command->is_bg = false;
 
 			}
 		}
@@ -623,6 +625,7 @@ struct command_line *parse_input()
 	//{
 	//	status();
 	// }
+	
 	return curr_command;
 }
 
